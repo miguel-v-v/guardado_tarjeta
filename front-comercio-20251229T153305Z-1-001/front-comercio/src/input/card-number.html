@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<header>
+  <style id="dynamic-style"></style>
+</header>
+<body style="margin:0;font-family:sans-serif;display: flex;">
+  <input 
+    type="text" 
+    id="card"
+    placeholder="**** **** **** ****" 
+  />
+<script>
+  window.addEventListener("message", (e) => {
+    if (e.data?.type === 'FIELD_ERROR') {
+      const input = document.getElementById('card');
+      Object.assign(input.style, e.data.styles || {});
+    }
+    if (e.data?.type !== "INIT_STYLES") return;
+
+    const s = e.data.styles;
+    const input = document.getElementById("card");
+
+    Object.assign(input.style, s.base || {});
+    
+    if (s.placeholder?.color) {
+      const style = document.getElementById("dynamic-style");
+      style.textContent = `
+        ::placeholder { color: ${s.placeholder.color}; }
+      `;
+    }
+
+    input.addEventListener("focus", () => {
+      Object.assign(input.style, s.focus || {});
+    });
+
+    input.addEventListener("blur", () => {
+      Object.assign(input.style, s.base || {});
+    });
+  });
+
+  const input = document.getElementById("card");
+  let rawValue = "";
+
+  function formatCard(value) {
+    return value.match(/.{1,4}/g)?.join(" ") || "";
+  }
+
+  function luhnCheck(cardNumber) {
+    let sum = 0;
+    let shouldDouble = false;
+
+    for (let i = cardNumber.length - 1; i >= 0; i--) {
+      let digit = parseInt(cardNumber[i], 10);
+
+      if (shouldDouble) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+
+      sum += digit;
+      shouldDouble = !shouldDouble;
+    }
+
+    return sum % 10 === 0;
+  }
+
+  input.addEventListener("input", () => {
+    rawValue = input.value.replace(/\D/g, "").slice(0, 16);
+    input.value = formatCard(rawValue);
+
+    const isValid =
+      rawValue.length === 16 && luhnCheck(rawValue);
+
+    parent.postMessage(
+      {
+        type: "CARD_TOKEN",
+        valid: isValid,
+        token: isValid
+          ? "card_" + btoa(rawValue).slice(0, 110)
+          : null,
+      },
+      "*"
+    );
+  });
+
+  input.addEventListener("blur", () => {
+    if (rawValue.length === 16) {
+      input.value = "**** **** **** " + rawValue.slice(-4);
+    }
+  });
+
+  input.addEventListener("focus", () => {
+    input.value = formatCard(rawValue);
+  });
+</script>
+
+</body>
+</html>

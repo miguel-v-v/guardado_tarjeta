@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<header>
+  <style id="dynamic-style"></style>
+</header>
+<body style="margin:0;font-family:sans-serif;display: flex;">
+  <input
+    type="password"
+    id="cvv"
+    placeholder="CVV"
+    maxlength="4"
+  />
+
+<script>
+  window.addEventListener("message", (e) => {
+    if (e.data?.type === 'FIELD_ERROR') {
+      const input = document.getElementById('cvv');
+      Object.assign(input.style, e.data.styles || {});
+    }
+    if (e.data?.type !== "INIT_STYLES") return;
+
+    const s = e.data.styles;
+    const input = document.getElementById("cvv");
+
+    Object.assign(input.style, s.base || {});
+    
+    if (s.placeholder?.color) {
+      const style = document.getElementById("dynamic-style");
+      style.textContent = `
+        ::placeholder { color: ${s.placeholder.color}; }
+      `;
+    }
+
+    input.addEventListener("focus", () => {
+      Object.assign(input.style, s.focus || {});
+    });
+
+    input.addEventListener("blur", () => {
+      Object.assign(input.style, s.base || {});
+    });
+    
+  });
+  
+  const input = document.getElementById("cvv");
+
+  input.addEventListener("input", () => {
+    input.classList.remove('cmp-error');
+    const value = input.value.replace(/\D/g, "").slice(0, 4);
+    input.value = value;
+
+    const isValid = /^\d{3,4}$/.test(value);
+
+    parent.postMessage(
+      {
+        type: "CVV_TOKEN",
+        valid: isValid,
+        token: isValid
+          ? "cvv_" + btoa(value).slice(0, 10)
+          : null,
+      },
+     "*"
+    );
+  });
+</script>
+
+</body>
+</html>

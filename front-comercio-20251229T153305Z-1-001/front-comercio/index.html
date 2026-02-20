@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout - CM Pagos</title>
+  <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" 
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="src/styles.css">
+  <script src="src/index.js"></script>
+</head>
+
+<body class="bg-light">
+  <div id="alert-commerce-container"></div>
+
+  
+
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+  
+
+      <div class="col-md-8">
+        <div class="mb-4 d-none" id="saved-cards-container">
+          <h6>Tarjetas guardadas</h6>
+          <div class="list-group" id="saved-cards-list"></div>
+
+          <div class="list-group mt-2">
+            <label class="list-group-item">
+              <input class="form-check-input me-2" type="radio" name="cardOption" checked value="new">
+              Usar nueva tarjeta
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-8">
+
+        <div class="card shadow-lg">
+          <div class="card-body">
+            <h4 class="card-title text-center mb-4">Pago con Tarjeta</h4>
+
+
+              <div class="mb-3">
+                <label class="form-label">Número de tarjeta</label>
+                <div class="" id="card-number"></div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Nombre completo</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="fullName" 
+                  placeholder="Nombre del titular"
+                  value="Enrique Jimenez"
+                  required 
+                />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Correo</label>
+                <input 
+                  type="email" 
+                  class="form-control" 
+                  id="email" 
+                  placeholder="correo@ejemplo.com"
+                  value="review@mail.com"
+                  required 
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Correo</label>
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  id="phone" 
+                  placeholder="55..."
+                  value="5555551111"
+                  required 
+                />
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Fecha de expiración</label>
+                  <div class="" id="expiration"></div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">CVV</label>
+                  <div class="" id="cvv"></div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Concepto</label>
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    id="concept"
+                    value="Pago prueba" 
+                    disabled
+                    required 
+                  />
+                  <div class="" id="concept"></div>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Monto</label>
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    id="amount" 
+                    value="100"
+                    disabled
+                    required 
+                  />
+                </div>
+                <div class="col-12">
+                  <div class="form-check mb-3">
+                    <input 
+                      class="form-check-input" 
+                      type="checkbox" 
+                      id="saveCard"
+                    />
+                    <label class="form-check-label" for="saveCard">
+                      Guardar tarjeta para futuros pagos
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+
+              <button 
+                type="submit" 
+                class="btn btn-primary w-100 mt-3"
+                id="btn-payment"
+              >
+                Aceptar
+              </button>
+
+            <p class="text-center mt-3 text-muted" id="responseMsg"></p>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  
+  <!-- Paso 1: Se agregar ruta sdk dentro del html como script al final -->
+  <script>
+    let selectedCardReference = null;
+
+    const desingCM = {
+      loader: {
+        logo: "https://img.freepik.com/psd-gratis/logotipo-abstracto-gradiente_23-2150689648.jpg",
+        primaryColor: "#0A2540",
+        spinnerColor: "#00d4ff",
+        showTimer: true
+      },
+      fields: {
+        base: {
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '16px',
+          color: '#333',
+          padding: '10px',
+          border: '1px solid #ccc',
+          borderRadius: '6px',
+          backgroundColor: '#fff',
+          width: '100%'
+        },
+        focus: {
+          borderColor: '#0A2540'
+        },
+        error: {
+          borderColor: 'red',
+          color: 'red'
+        },
+        placeholder: {
+          color: '#9ca3af'
+        }
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        // Paso 1: Recuperar llaves y token desde el back del comercio
+        const keysMerchan = await getKeys();
+        console.log(keysMerchan) 
+        const resToken = await createToken(keysMerchan);
+        console.log("Token recibido:", resToken);
+
+        await loadSdk(resToken.sdkData.url);
+
+        /* if(resToken.sdkData){
+          const script = document.createElement("script");
+          script.src = `${resToken.sdkData}`;
+          document.head.appendChild(script);
+        } */
+
+        // Paso 2: crear instancia del SDK usando el token
+        //Funcion requiere las llaves, informacion del token y diseño base de los iframe
+        window.cmpSDKInstance = new CMPSDK(keysMerchan, resToken, desingCM);
+
+        // Paso 3: inicializar SDK
+        await window.cmpSDKInstance.init();
+
+        // Paso 4: consumir métodos del SDK para el listado de tarjetas
+        const listCardRes = await window.cmpSDKInstance.getListCard();
+        console.log(listCardRes)
+        if(listCardRes.status == "SUCCESS"){
+          renderSavedCards(listCardRes.response);
+          console.log("Tarjetas guardadas:", listCardRes.response);
+        }
+
+      } catch (err) {
+        console.error("Error inicializando SDK:", err);
+      }
+    });
+
+
+    //Paso 5: El comercio guarda el boton de pago dentro de una variable
+    const btn = document.getElementById("btn-payment");
+
+    //Paso 6: El comercio genera una funcion para el evento click del boton pagar
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      /* Aqui van posibles validaciones del comercio */
+      //Paso 7: El comercio genera un json para el llenado del los campos dentro del furmulario que seran requeridos dentro del sdk
+      //Los nombres son unicos no se podrian modificar
+      const payload = {
+        name: document.getElementById("fullName").value,
+        email: document.getElementById("email").value,
+        amount: Number(document.getElementById("amount").value),
+        concept: document.getElementById("concept").value,
+        phone: document.getElementById("phone").value,
+        saveCard: document.getElementById("saveCard").checked,
+        cardReference: selectedCardReference
+      };
+      //Paso 8: Se genera una estructura try catch para el manejo de excepciones que ejecutaria el bloque try
+      try {
+        //Paso 9: El comercio ejecutaria la funcion "generatepayment" asincrona y guardaria por una variable su respuesta
+        //Al ejecutar esta funcion se generara un loader dentro del sdk
+        const result = await cmpSDKInstance.generatePayment(payload);
+        //El comercio esperar la respuesta de la validacion de la tarjeta dentro del sdk
+        //Paso 10: Si el sdk al responder correctamente enviaria un body con una descripcion, header y body sobre informacion de la validacion de tarjeta
+        if(result.description == 'Validación completada'){ //Cambio
+          //Paso 11: El comercio consumira su servicio para el pago de tajeta con los parametros recibidos
+          const resToken = await createPayment(result.body, result.header); //Cambio
+          console.log('Respuesta pago:', resToken);
+          //Paso 12: El comercio manejara la respuesta de su back para mostrar el resultado de aprobando dentro del front
+          if (!resToken.ok) {
+            showAlert({
+              message: resToken.message || 'Error procesando el pago',
+              type: 'error'
+            });
+          }else{
+            showAlert({
+              message: 'Pago procesado correctamente',
+              type: 'success'
+            });
+          }
+        }else{
+          showAlert({
+            message: result.description,
+            type: 'warning'
+          });
+        }
+
+      } catch (err) {
+        showAlert({
+            message: err,
+            type: 'warning'
+          });
+        console.error(err);
+      }
+    });
+
+
+    function renderSavedCards(cards) {
+      const container = document.getElementById("saved-cards-container");
+      const list = document.getElementById("saved-cards-list");
+      container.classList.remove("d-none");
+
+      cards.forEach((card, index) => {
+        const item = document.createElement("label");
+        item.className = "list-group-item d-flex align-items-center justify-content-between";
+        
+        //Cambio
+        item.innerHTML = `
+          <div class="d-flex align-items-center">
+          <input 
+            class="form-check-input me-2" 
+            type="radio" 
+            name="cardOption" 
+            value="${card.cardReference}"
+          />
+          <div>
+            <strong>${card.cardType}</strong><br/>
+            <small>${card.card}</small>
+          </div>
+        </div>
+
+        <button 
+          type="button"
+          class="btn btn-sm btn-outline-danger"
+          data-card-reference="${card.cardReference}">
+          Eliminar
+        </button>
+        `;
+        //Cambio
+        const deleteBtn = item.querySelector("button");
+        deleteBtn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          await handleDeleteCard(card.cardReference);
+        });
+
+        list.appendChild(item);
+      });
+    }
+
+    document.addEventListener("change", (e) => {
+      if (e.target.name === "cardOption") {
+        handleCardSelection(e.target.value);
+        selectedCardReference = e.target.value == "new"
+          ? null
+          : e.target.value;
+      }
+    });
+
+    function handleCardSelection(value) {
+      const cardNumber = document.getElementById("card-number");
+      const expiration = document.getElementById("expiration");
+      if (value === "new") {
+        unlockNewCard(cardNumber, expiration);
+      } else {
+        lockSavedCard(cardNumber, expiration);
+        window.selectedCardReference = value; // guardar referencia
+      }
+    }
+
+    function lockSavedCard(cardNumber, expiration) {
+      cardNumber.style.pointerEvents = "none";
+      cardNumber.style.opacity = "0.3";
+      expiration.style.pointerEvents = "none";
+      expiration.style.opacity = "0.3";
+    }
+
+    function unlockNewCard(cardNumber, expiration) {
+      cardNumber.style.pointerEvents = "auto";
+      cardNumber.style.opacity = "1";
+      expiration.style.pointerEvents = "auto";
+      expiration.style.opacity = "1";
+      window.selectedCardReference = null;
+    }
+
+    async function handleDeleteCard(cardReference) {
+      if (!cardReference) return;
+      try {
+        const deleteRes = await window.cmpSDKInstance.deleteCard(cardReference);
+        if (deleteRes.status != "SUCCESS") {
+          showAlert({
+              message: resToken.message || 'No fue posible eliminar la tarjeta.',
+              type: 'error'
+            });
+          return;
+        }else{
+          showAlert({
+            message: 'Tarjeta eliminada correctamente',
+            type: 'success'
+          });
+        }
+        await refreshSavedCards();
+      } catch (error) {
+        console.error("Error eliminando tarjeta:", error);
+        alert("Ocurrió un error al eliminar la tarjeta.");
+      }
+    }
+
+    //Cambio
+    async function refreshSavedCards() {
+      try {
+        const listCardRes = await window.cmpSDKInstance.getListCard();
+        const container = document.getElementById("saved-cards-list");
+        if (container) {
+          container.innerHTML = "";
+        }
+        if (listCardRes.status === "SUCCESS") {
+          renderSavedCards(listCardRes.response);
+          console.log("Tarjetas guardadas:", listCardRes.response);
+        } else {
+          console.warn("No se pudieron obtener las tarjetas.");
+        }
+
+      } catch (error) {
+        console.error("Error obteniendo tarjetas:", error);
+      }
+    }
+
+
+
+
+
+  </script>
+
+</body>
+</html>

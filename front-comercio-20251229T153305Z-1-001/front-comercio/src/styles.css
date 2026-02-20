@@ -1,0 +1,34 @@
+body {
+  font-family: sans-serif;
+}
+
+  .alert-commerce {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: Arial, sans-serif;
+  }
+
+  .alert-commerce {
+    min-width: 260px;
+    padding: 14px 16px;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.25);
+    animation: slideIn .3s ease;
+  }
+
+  .alert-commerce.success { background: #2ecc71; }
+  .alert-commerce.error   { background: #e74c3c; }
+  .alert-commerce.warning { background: #f39c12; }
+  .alert-commerce.info    { background: #3498db; }
+
+  @keyframes slideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
